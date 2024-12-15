@@ -1,0 +1,17 @@
+import matplotlib.pyplot as plt
+
+# Load the model
+model = tf.keras.models.load_model('crypto_price_predictor.h5')
+
+# Make predictions
+predictions = model.predict(X_test)
+predictions = scaler.inverse_transform(predictions)
+
+# Plot the predictions
+plt.plot(predictions, color='red', label='Predicted Prices')
+plt.plot(scaler.inverse_transform(y_test.reshape(-1, 1)), color='blue', label='Actual Prices')
+plt.title('Cryptocurrency Price Prediction')
+plt.xlabel('Time')
+plt.ylabel('Price')
+plt.legend()
+plt.show()
