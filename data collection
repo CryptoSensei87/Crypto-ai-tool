@@ -25,7 +25,7 @@ def get_coingecko_data(coin_id):
 def get_coinmarketcap_data(symbol):
     url = f"https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={symbol}"
     headers = {
-        "X-CMC_PRO_API_KEY": "your_api_key"  # Replace with your CoinMarketCap API key
+        "X-CMC_PRO_API_KEY": "9c9978a1-3e29-41db-85e9-734e47f6e72b"  # Replace with your CoinMarketCap API key
     }
     response = requests.get(url, headers=headers)
     return response.json()
