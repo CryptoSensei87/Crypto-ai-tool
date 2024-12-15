@@ -1,5 +1,11 @@
 import requests
 import json
+import os
+import logging
+from concurrent.futures import ThreadPoolExecutor
+
+# Configure logging
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def get_top_50_coins():
     url = "https://api.coingecko.com/api/v3/coins/markets"
@@ -10,46 +16,63 @@ def get_top_50_coins():
         "page": 1
     }
     response = requests.get(url, params=params)
+    response.raise_for_status()
     return response.json()
 
 def get_binance_data(symbol):
     url = f"https://api.binance.com/api/v3/ticker/24hr?symbol={symbol}"
     response = requests.get(url)
+    response.raise_for_status()
     return response.json()
 
 def get_coingecko_data(coin_id):
     url = f"https://api.coingecko.com/api/v3/coins/{coin_id}"
     response = requests.get(url)
+    response.raise_for_status()
     return response.json()
 
 def get_coinmarketcap_data(symbol):
     url = f"https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol={symbol}"
     headers = {
-        "X-CMC_PRO_API_KEY": "9c9978a1-3e29-41db-85e9-734e47f6e72b"  # Replace with your CoinMarketCap API key
+        "X-CMC_PRO_API_KEY": os.getenv("COINMARKETCAP_API_KEY")  # Use environment variable for API key
     }
     response = requests.get(url, headers=headers)
+    response.raise_for_status()
     return response.json()
 
-def main():
-    top_50_coins = get_top_50_coins()
-    for coin in top_50_coins:
-        symbol = coin['symbol'].upper() + "USDT"
-        coin_id = coin['id']
-        
-        # Fetch data from Binance
+def print_data(source, symbol, data):
+    logging.info(f"{source} data for {symbol}:")
+    logging.info(json.dumps(data, indent=4))
+
+def fetch_data_for_coin(coin):
+    symbol = coin['symbol'].upper() + "USDT"
+    coin_id = coin['id']
+
+    try:
         binance_data = get_binance_data(symbol)
-        print(f"Binance data for {symbol}:")
-        print(json.dumps(binance_data, indent=4))
-        
-        # Fetch data from CoinGecko
+        print_data("Binance", symbol, binance_data)
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch Binance data for {symbol}: {e}")
+
+    try:
         coingecko_data = get_coingecko_data(coin_id)
-        print(f"CoinGecko data for {coin_id}:")
-        print(json.dumps(coingecko_data, indent=4))
-        
-        # Fetch data from CoinMarketCap
+        print_data("CoinGecko", coin_id, coingecko_data)
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch CoinGecko data for {coin_id}: {e}")
+
+    try:
         coinmarketcap_data = get_coinmarketcap_data(coin['symbol'].upper())
-        print(f"CoinMarketCap data for {coin['symbol'].upper()}:")
-        print(json.dumps(coinmarketcap_data, indent=4))
+        print_data("CoinMarketCap", coin['symbol'].upper(), coinmarketcap_data)
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch CoinMarketCap data for {coin['symbol'].upper()}: {e}")
+
+def main():
+    try:
+        top_50_coins = get_top_50_coins()
+        with ThreadPoolExecutor() as executor:
+            executor.map(fetch_data_for_coin, top_50_coins)
+    except requests.RequestException as e:
+        logging.error(f"Failed to fetch top 50 coins: {e}")
 
 if __name__ == "__main__":
     main()
